@@ -10,10 +10,10 @@ const CONFIG = {
     // API_BASE_URL: 'https://your-traintrack-backend.vercel.app/api',
     
     // For production (both deployed):
-    // API_BASE_URL: 'https://traintrack-backend.vercel.app/api',
+    API_BASE_URL: 'https://traintracksc.vercel.app/api',
     
     // Default - tries to use same origin (only works if backend is on same domain)
-    API_BASE_URL: window.location.origin + '/api',
+    //API_BASE_URL: window.location.origin + '/api',
     
     // App Configuration
     APP_NAME: 'TrainTrack Athlete',
