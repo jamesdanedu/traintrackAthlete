@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrainTrack PWA - Health Check</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .config-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .config-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .config-value {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            word-break: break-all;
+        }
+        
+        .test-section {
+            margin-top: 30px;
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .test-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        
+        .info {
+            color: #17a2b8;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏃 TrainTrack PWA Health Check</h1>
+        <p class="subtitle">Test connections and diagnose issues</p>
+        
+        <div class="config-section">
+            <div class="config-title">Current Configuration</div>
+            <div class="config-value" id="config">Loading...</div>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-title">Backend URL</div>
+            <input type="text" id="backendUrl" class="config-value" style="width: 100%; padding: 10px;" 
+                   placeholder="http://localhost:3000" value="http://localhost:3000">
+        </div>
+        
+        <div class="test-section">
+            <button class="test-button" onclick="testBackendHealth()">Test Backend Health</button>
+            <button class="test-button" onclick="testAuth()">Test Authentication</button>
+            <button class="test-button" onclick="testFullFlow()">Test Full Flow</button>
+            <button class="test-button" onclick="clearResults()">Clear Results</button>
+        </div>
+        
+        <div class="results" id="results"></div>
+    </div>
+    
+    <script>
+        let results = [];
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateConfig();
+            log('info', 'Health check ready. Click a test button to begin.');
+        });
+        
+        function updateConfig() {
+            const config = {
+                'Browser': navigator.userAgent.split('(')[0].trim(),
+                'Online': navigator.onLine ? 'Yes' : 'No',
+                'PWA Installed': window.matchMedia('(display-mode: standalone)').matches ? 'Yes' : 'No',
+                'Service Worker': 'serviceWorker' in navigator ? 'Supported' : 'Not Supported',
+                'LocalStorage': typeof(Storage) !== "undefined" ? 'Available' : 'Not Available'
+            };
+            
+            document.getElementById('config').textContent = JSON.stringify(config, null, 2);
+        }
+        
+        function log(type, message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            let logMessage = `[${timestamp}] `;
+            
+            if (type === 'success') logMessage += '✅ ';
+            else if (type === 'error') logMessage += '❌ ';
+            else if (type === 'warning') logMessage += '⚠️ ';
+            else if (type === 'info') logMessage += 'ℹ️ ';
+            
+            logMessage += message;
+            
+            if (data) {
+                logMessage += '\n' + JSON.stringify(data, null, 2);
+            }
+            
+            results.push(logMessage);
+            document.getElementById('results').textContent = results.join('\n\n');
+            document.getElementById('results').scrollTop = document.getElementById('results').scrollHeight;
+        }
+        
+        function clearResults() {
+            results = [];
+            document.getElementById('results').textContent = '';
+            log('info', 'Results cleared');
+        }
+        
+        async function testBackendHealth() {
+            const backendUrl = document.getElementById('backendUrl').value;
+            log('info', `Testing backend health at: ${backendUrl}/api/health`);
+            
+            try {
+                const response = await fetch(`${backendUrl}/api/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('success', 'Backend is healthy!', data);
+                } else {
+                    log('error', `Backend returned error status: ${response.status}`, data);
+                }
+            } catch (error) {
+                log('error', 'Failed to connect to backend', {
+                    error: error.message,
+                    suggestion: 'Make sure backend is running and URL is correct'
+                });
+            }
+        }
+        
+        async function testAuth() {
+            const backendUrl = document.getElementById('backendUrl').value;
+            log('info', 'Testing authentication flow...');
+            
+            // Test with invalid credentials first
+            log('info', 'Step 1: Testing with invalid credentials');
+            try {
+                const response = await fetch(`${backendUrl}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'test@invalid.com',
+                        password: 'wrongpassword'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 401) {
+                    log('success', 'Auth endpoint working correctly (rejected invalid credentials)', data);
+                } else {
+                    log('warning', `Unexpected response for invalid credentials: ${response.status}`, data);
+                }
+            } catch (error) {
+                log('error', 'Failed to test auth endpoint', {
+                    error: error.message
+                });
+            }
+            
+            // Prompt for real credentials
+            log('info', 'Step 2: Test with real credentials');
+            const email = prompt('Enter test user email:');
+            const password = prompt('Enter test user password:');
+            
+            if (email && password) {
+                try {
+                    const response = await fetch(`${backendUrl}/api/auth/login`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email: email,
+                            password: password,
+                            deviceInfo: {
+                                type: 'web',
+                                name: 'Test Browser',
+                                fingerprint: 'test-' + Date.now()
+                            }
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        log('success', 'Login successful!', {
+                            user: data.user,
+                            hasSessionToken: !!data.sessionToken,
+                            tokenLength: data.sessionToken?.length
+                        });
+                        
+                        // Store for next test
+                        localStorage.setItem('testSessionToken', data.sessionToken);
+                        localStorage.setItem('testUser', JSON.stringify(data.user));
+                    } else {
+                        log('error', `Login failed: ${response.status}`, data);
+                    }
+                } catch (error) {
+                    log('error', 'Failed to login', {
+                        error: error.message
+                    });
+                }
+            } else {
+                log('warning', 'Test cancelled - no credentials provided');
+            }
+        }
+        
+        async function testFullFlow() {
+            const backendUrl = document.getElementById('backendUrl').value;
+            const sessionToken = localStorage.getItem('testSessionToken');
+            
+            if (!sessionToken) {
+                log('warning', 'No session token found. Please run "Test Authentication" first.');
+                return;
+            }
+            
+            log('info', 'Testing full authenticated flow...');
+            
+            // Test profile endpoint
+            log('info', 'Step 1: Fetching user profile');
+            try {
+                const response = await fetch(`${backendUrl}/api/auth/profile`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('success', 'Profile fetched successfully', data);
+                    
+                    // Check if athlete profile exists
+                    if (data.athlete) {
+                        log('success', 'Athlete profile found', data.athlete);
+                    } else {
+                        log('warning', 'No athlete profile found for this user');
+                    }
+                } else {
+                    log('error', `Failed to fetch profile: ${response.status}`, data);
+                    return;
+                }
+            } catch (error) {
+                log('error', 'Failed to fetch profile', {
+                    error: error.message
+                });
+                return;
+            }
+            
+            // Test pre-training assessment submission
+            log('info', 'Step 2: Testing pre-training assessment submission');
+            try {
+                const assessmentData = {
+                    fatigue: 3,
+                    soreness: 2,
+                    sleep: 4,
+                    stress: 2,
+                    readiness: 4,
+                    bodyAreas: ['quads', 'hamstrings'],
+                    coachNotes: 'Test submission from health check'
+                };
+                
+                const response = await fetch(`${backendUrl}/api/assessments/pre-training`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionToken}`
+                    },
+                    body: JSON.stringify(assessmentData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('success', 'Pre-training assessment submitted successfully', data);
+                } else {
+                    log('error', `Failed to submit assessment: ${response.status}`, data);
+                }
+            } catch (error) {
+                log('error', 'Failed to submit assessment', {
+                    error: error.message
+                });
+            }
+            
+            log('info', 'Full flow test complete!');
+        }
+    </script>
+</body>
+</html>
